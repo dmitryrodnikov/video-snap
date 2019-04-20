@@ -1,0 +1,16 @@
+{
+  "name": "video-screenshot-creator",
+  "version": "1.0.0",
+  "license": "MIT",
+  "scripts": {
+    "demo": "webpack"
+  },
+  "devDependencies": {
+    "ts-loader": "^5.3.3",
+    "webpack": "^4.29.6",
+    "webpack-cli": "^3.3.0"
+  },
+  "dependencies": {
+    "typescript": "^3.4.2"
+  }
+}
