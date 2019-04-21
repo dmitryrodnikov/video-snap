@@ -1,10 +1,9 @@
 import {ScreenShotCreator} from '../src/ScreenShotCreator';
 
-document.addEventListener('DOMContentLoaded', () => {
+const renderInput = (): void => {
     const videoInput = document.createElement('input');
     videoInput.type = 'file';
     videoInput.accept = 'video/*';
-    document.body.appendChild(videoInput);
 
     const renderThumbnails = (thumbnails: string[]): void => {
         thumbnails.forEach(thumbnail => {
@@ -24,4 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     videoInput.addEventListener('change', handleVideoInputChange);
-});
+    document.body.appendChild(videoInput);
+};
+
+document.addEventListener('DOMContentLoaded', renderInput);
