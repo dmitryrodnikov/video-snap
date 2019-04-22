@@ -1,16 +1,14 @@
 const defaultConfig = {numberOfThumbnails: 1, imageQuality: 1};
+const VIDEO_READY_STATE = 4;
+const DEFAULT_VIDEO_LOAD_WAIT_TIME = 2000;
 
 export class ScreenShotCreator {
-    private static readonly constants = {
-        VIDEO_READY_STATE: 4,
-    };
     private readonly video: HTMLVideoElement;
     private readonly canvas: HTMLCanvasElement;
     private readonly context: CanvasRenderingContext2D;
     private config: Config;
 
     /** @param videoSource - any valid video tag source (url, blob or blobUrl) */
-    // todo look at valid video sources
     constructor(videoSource: string) {
         this.video = document.createElement('video');
         this.canvas = document.createElement('canvas');
@@ -24,7 +22,6 @@ export class ScreenShotCreator {
     }
 
     public async getScreenShots(config: Config = defaultConfig): Promise<string[]> {
-        const {VIDEO_READY_STATE} = ScreenShotCreator.constants;
         this.config = config; // todo wrong
         try {
             if (this.video.readyState !== VIDEO_READY_STATE) {
@@ -37,7 +34,7 @@ export class ScreenShotCreator {
         }
     }
 
-    private waitVideoLoading(maxWaitTime: number = 2000): Promise<void> {
+    private waitVideoLoading(maxWaitTime: number = DEFAULT_VIDEO_LOAD_WAIT_TIME): Promise<void> {
         return new Promise((resolve, reject) => {
             const onLoadedHandler = () => {
                 removeListeners();
@@ -103,11 +100,10 @@ export class ScreenShotCreator {
             // Wait for video to process rewind
             await this.waitEvent(video, 'seeked');
             // Draw image on canvas from video
-            // todo what this params is about? what is context?
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             return await this.convertCanvasImageToBlobUrl(canvas);
         } catch (e) {
-            console.error('>>>', e);
+            console.error(e);
         }
     }
 }
