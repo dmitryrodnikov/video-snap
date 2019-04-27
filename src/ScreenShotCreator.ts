@@ -6,31 +6,39 @@ export class ScreenShotCreator {
     private readonly video: HTMLVideoElement;
     private readonly canvas: HTMLCanvasElement;
     private readonly context: CanvasRenderingContext2D;
-    private config: Config;
 
-    /** @param videoSource - any valid video tag source (url, blob or blobUrl) */
-    constructor(videoSource: string) {
+    /**
+     * @param videoSourceUrl - URL to a video
+     */
+    constructor(videoSourceUrl: string) {
         this.video = document.createElement('video');
         this.canvas = document.createElement('canvas');
         this.context = this.canvas.getContext('2d');
 
         if (!this.context) {
-            throw new Error('Could not create context');
+            throw new Error('Could not create canvas context');
         }
 
-        this.video.src = videoSource;
+        this.video.crossOrigin = 'anonymous';
+        this.video.src = videoSourceUrl;
     }
 
+    /**
+     * Asynchronously take screenshots from video source provided in constructor.
+     * Specific number of screenshots equally distributed to whole video length.
+     *
+     * @param {Config} config - configuration for screenshots;
+     *
+     * @return {Promise<string[]>} - array of Blob URLs to screenshots
+     */
     public async getScreenShots(config: Config = defaultConfig): Promise<string[]> {
-        this.config = config; // todo wrong
         try {
             if (this.video.readyState !== VIDEO_READY_STATE) {
                 await this.waitVideoLoading();
             }
-            return await this.processVideo();
+            return await this.processVideo(config);
         } catch (e) {
-            console.error('Error loading thumbnails', e);
-            return [];
+            return e;
         }
     }
 
@@ -43,7 +51,7 @@ export class ScreenShotCreator {
 
             const onErrorHandler = () => {
                 removeListeners();
-                reject();
+                reject('Error loading video');
             };
 
             const removeListeners = () => {
@@ -57,54 +65,63 @@ export class ScreenShotCreator {
         });
     }
 
-    private async processVideo(): Promise<string[]> {
-        const {video, canvas, config} = this;
-        const {numberOfThumbnails} = config;
-        const thumbnails = [];
-        const step = video.duration / numberOfThumbnails;
-        // Match canvas and video size
-        canvas.height = video.videoHeight;
-        canvas.width = video.videoWidth;
-        for (let i = 0; i < numberOfThumbnails; i++) {
-            const thumbnail = await this.getScreenshot(step * i);
-            thumbnails.push(thumbnail);
+    private async processVideo(config: Config): Promise<string[]> {
+        try {
+            const {video, canvas} = this;
+            const {numberOfThumbnails} = config;
+            const thumbnails = [];
+            const step = video.duration / numberOfThumbnails;
+
+            // Match canvas and video size
+            canvas.height = video.videoHeight;
+            canvas.width = video.videoWidth;
+
+            for (let i = 0; i < numberOfThumbnails; i++) {
+                const thumbnail = await this.captureImage(step * i, config.imageQuality);
+                thumbnails.push(thumbnail);
+            }
+
+            return thumbnails;
+        } catch (e) {
+            return e;
         }
-        return thumbnails;
     }
 
-    private waitEvent(element, event): Promise<void> {
+    /**
+     * Set video to a specific time and wait while video rewind.
+     * Then draw image on canvas and convert it to Blob URL
+     * @return {Promise<string>} - Blob URL
+     */
+    private async captureImage(time: number, quality: number): Promise<string> {
+        try {
+            const {video, canvas, context} = this;
+            await this.rewindVideo(video, time);
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return await this.convertCanvasImageToBlobUrl(canvas, quality);
+        } catch (e) {
+            return e;
+        }
+    }
+
+    private rewindVideo(video: HTMLVideoElement, targetTime: number): Promise<void> {
         return new Promise(resolve => {
+            video.currentTime = targetTime;
             const handler = () => {
-                element.removeEventListener(event, handler);
+                video.removeEventListener('seeked', handler);
                 resolve();
             };
-            element.addEventListener(event, handler);
+            video.addEventListener('seeked', handler);
         });
     }
 
-    private convertCanvasImageToBlobUrl(canvas: HTMLCanvasElement): Promise<string> {
+    private convertCanvasImageToBlobUrl(canvas: HTMLCanvasElement, quality: number): Promise<string> {
         return new Promise(resolve => {
             canvas.toBlob(
                 (blob) => resolve(window.URL.createObjectURL(blob)),
                 'image/jpeg',
-                this.config.imageQuality
+                quality
             );
         });
-    }
-
-    private async getScreenshot(time: number): Promise<string> {
-        try {
-            const {video, canvas, context} = this;
-            // Rewind to specific frame
-            video.currentTime = time;
-            // Wait for video to process rewind
-            await this.waitEvent(video, 'seeked');
-            // Draw image on canvas from video
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            return await this.convertCanvasImageToBlobUrl(canvas);
-        } catch (e) {
-            console.error(e);
-        }
     }
 }
 
