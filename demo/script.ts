@@ -5,6 +5,9 @@ const renderInput = (): void => {
     videoInput.type = 'file';
     videoInput.accept = 'video/*';
 
+    const urlInput = document.createElement('input');
+    urlInput.type = 'text';
+
     const renderThumbnails = (thumbnails: string[]): void => {
         thumbnails.forEach(thumbnail => {
             const img = document.createElement('img');
@@ -15,15 +18,35 @@ const renderInput = (): void => {
     };
 
     const handleVideoInputChange = async (): Promise<void> => {
-        const file = videoInput.files[0];
-        const fileUrl = window.URL.createObjectURL(file);
-        const screenShotCreator = new ScreenShotCreator(fileUrl);
-        const thumbnails = await screenShotCreator.getScreenShots({numberOfThumbnails: 10});
-        renderThumbnails(thumbnails);
+        try {
+            const file = videoInput.files[0];
+            const fileUrl = window.URL.createObjectURL(file);
+            const screenShotCreator = new ScreenShotCreator(fileUrl);
+            const thumbnails = await screenShotCreator.getScreenShots({numberOfThumbnails: 10});
+            renderThumbnails(thumbnails);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleUrlInputChange = async (url: string): Promise<void> => {
+        try {
+            const screenShotCreator = new ScreenShotCreator(url);
+            const thumbnails = await screenShotCreator.getScreenShots({numberOfThumbnails: 10});
+            renderThumbnails(thumbnails);
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     videoInput.addEventListener('change', handleVideoInputChange);
+    urlInput.addEventListener('blur', (event: FocusEvent) => {
+        const url = (event.target as HTMLInputElement).value;
+        handleUrlInputChange(url);
+    });
+
     document.body.appendChild(videoInput);
+    document.body.appendChild(urlInput);
 };
 
 document.addEventListener('DOMContentLoaded', renderInput);
