@@ -1,6 +1,8 @@
-const defaultConfig = {numberOfThumbnails: 1, imageQuality: 1};
 const VIDEO_READY_STATE = 4;
-const DEFAULT_VIDEO_LOAD_WAIT_TIME = 2000;
+const DEFAULT_CONFIG: Config = {
+    imageQuality: 1,
+    maxVideoLoadTime: 5000,
+};
 
 export class ScreenShotCreator {
     private readonly video: HTMLVideoElement;
@@ -24,25 +26,59 @@ export class ScreenShotCreator {
     }
 
     /**
-     * Asynchronously take screenshots from video source provided in constructor.
+     * Asynchronously take screenshots from video provided in constructor.
      * Specific number of screenshots equally distributed to whole video length.
      *
+     * @param {number} numberOfFrames - number of images video should be sliced to
      * @param {Config} config - configuration for screenshots;
      *
-     * @return {Promise<string[]>} - array of Blob URLs to screenshots
+     * @return Promise with array of Blob URLs to captured images.
      */
-    public async getScreenShots(config: Config = defaultConfig): Promise<string[]> {
+    public async getFrames(numberOfFrames: number, config: Config = DEFAULT_CONFIG): Promise<string[]> {
         try {
+            // todo apply partial config (the rest is default)
             if (this.video.readyState !== VIDEO_READY_STATE) {
-                await this.waitVideoLoading();
+                await this.waitVideoLoading(config.maxVideoLoadTime);
             }
-            return await this.processVideo(config);
+
+            const {video, canvas} = this;
+            // Match canvas and video size
+            canvas.height = video.videoHeight;
+            canvas.width = video.videoWidth;
+
+            return await this.processVideo(numberOfFrames, config);
         } catch (e) {
             return e;
         }
     }
 
-    private waitVideoLoading(maxWaitTime: number = DEFAULT_VIDEO_LOAD_WAIT_TIME): Promise<void> {
+    /**
+     * Capture image from specific time of the video provided in constructor;
+     *
+     * @param time - time of the video where image should be taken
+     * @param config - image capture params
+     *
+     * @return Promise with Blob URL to captured image.
+     */
+    public async getFrameFrom(time: number, config: Config): Promise<string> {
+        try {
+            // todo apply partial config (the rest is default)
+            if (this.video.readyState !== VIDEO_READY_STATE) {
+                await this.waitVideoLoading(config.maxVideoLoadTime);
+            }
+
+            const {video, canvas} = this;
+            // Match canvas and video size
+            canvas.height = video.videoHeight;
+            canvas.width = video.videoWidth;
+
+            return await this.captureImage(time, config.imageQuality);
+        } catch (e) {
+            return e;
+        }
+    }
+
+    private waitVideoLoading(maxWaitTime: number): Promise<void> {
         return new Promise((resolve, reject) => {
             const onLoadedHandler = () => {
                 removeListeners();
@@ -65,16 +101,11 @@ export class ScreenShotCreator {
         });
     }
 
-    private async processVideo(config: Config): Promise<string[]> {
+    private async processVideo(numberOfThumbnails: number, config: Config): Promise<string[]> {
         try {
-            const {video, canvas} = this;
-            const {numberOfThumbnails} = config;
+            const {video} = this;
             const thumbnails = [];
             const step = video.duration / numberOfThumbnails;
-
-            // Match canvas and video size
-            canvas.height = video.videoHeight;
-            canvas.width = video.videoWidth;
 
             for (let i = 0; i < numberOfThumbnails; i++) {
                 const thumbnail = await this.captureImage(step * i, config.imageQuality);
@@ -125,7 +156,8 @@ export class ScreenShotCreator {
     }
 }
 
+// Probably should be ImageConfig (maxWidth, maxHeight...), but maxVideoLoadTime is not related
 interface Config {
-    numberOfThumbnails?: number,
     imageQuality?: number,
+    maxVideoLoadTime?: number;
 }
