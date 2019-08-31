@@ -1,8 +1,4 @@
 const VIDEO_READY_STATE = 4;
-const DEFAULT_CONFIG: Config = {
-    imageQuality: 1,
-    maxVideoLoadTime: 5000,
-};
 
 export class ScreenShotCreator {
     private readonly video: HTMLVideoElement;
@@ -46,7 +42,7 @@ export class ScreenShotCreator {
      *
      * @return Promise with array of Blob URLs to captured images.
      */
-    public async getFrames(numberOfFrames: number, config: Config = DEFAULT_CONFIG): Promise<string[]> {
+    public async getFrames(numberOfFrames: number, config: Config = {}): Promise<string[]> {
         if (this.video.readyState !== VIDEO_READY_STATE) {
             await this.waitVideoLoading(config.maxVideoLoadTime);
         }
@@ -66,7 +62,7 @@ export class ScreenShotCreator {
      *
      * @return Promise with Blob URL to captured image.
      */
-    public async getFrameFrom(time: number, config: Config): Promise<string> {
+    public async getFrameFrom(time: number, config: Config = {}): Promise<string> {
         if (this.video.readyState !== VIDEO_READY_STATE) {
             await this.waitVideoLoading(config.maxVideoLoadTime);
         }
