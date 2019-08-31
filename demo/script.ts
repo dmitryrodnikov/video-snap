@@ -1,4 +1,4 @@
-import {ScreenShotCreator} from '../src/ScreenShotCreator';
+import {VideoSnap} from '../src/VideoSnap';
 
 const renderInput = (): void => {
     const videoInput = document.createElement('input');
@@ -21,8 +21,8 @@ const renderInput = (): void => {
         try {
             const file = videoInput.files[0];
             const fileUrl = window.URL.createObjectURL(file);
-            const screenShotCreator = new ScreenShotCreator(fileUrl);
-            const thumbnails = await screenShotCreator.getFrames(10);
+            const videoSnap = new VideoSnap(fileUrl);
+            const thumbnails = await videoSnap.getFrames(10);
             renderThumbnails(thumbnails);
         } catch (e) {
             console.error(e);
@@ -31,8 +31,8 @@ const renderInput = (): void => {
 
     const handleUrlInputChange = async (url: string): Promise<void> => {
         try {
-            const screenShotCreator = new ScreenShotCreator(url);
-            const thumbnails = await screenShotCreator.getFrames(10);
+            const videoSnap = new VideoSnap(url);
+            const thumbnails = await videoSnap.getFrames(10);
             renderThumbnails(thumbnails);
         } catch (e) {
             console.error(e);

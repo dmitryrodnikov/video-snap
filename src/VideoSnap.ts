@@ -1,6 +1,6 @@
 const VIDEO_READY_STATE = 4;
 
-export class ScreenShotCreator {
+export class VideoSnap {
     private readonly video: HTMLVideoElement;
     private readonly canvas: HTMLCanvasElement;
     private readonly context: CanvasRenderingContext2D;
@@ -34,11 +34,11 @@ export class ScreenShotCreator {
     }
 
     /**
-     * Asynchronously take screenshots from video provided in constructor.
-     * Specific number of screenshots equally distributed to whole video length.
+     * Asynchronously take snapshots from video provided in constructor.
+     * Specific number of snapshots equally distributed to whole video length.
      *
      * @param {number} numberOfFrames - number of images video should be sliced to
-     * @param {Config} config - configuration for screenshots;
+     * @param {Config} config - configuration for snapshots;
      *
      * @return Promise with array of Blob URLs to captured images.
      */
@@ -106,9 +106,9 @@ export class ScreenShotCreator {
     }
 
     /**
-     * Make specific amount of screenshots evenly distributed from start to end of the video.
+     * Make specific amount of snapshots evenly distributed from start to end of the video.
      *
-     * @param numberOfImages - amount of screenshots to make
+     * @param numberOfImages - amount of snapshots to make
      * @param config - configuration object
      *
      * @return Promise with array of Blob url's to images
@@ -130,7 +130,7 @@ export class ScreenShotCreator {
      * Then draw image on canvas and convert it to Blob URL
      */
     private async captureImage(time: number, quality: number = 1): Promise<string> {
-        await ScreenShotCreator.rewindVideo(this.video, time);
+        await VideoSnap.rewindVideo(this.video, time);
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.context.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
         return this.convertCanvasImageToBlobUrl(this.canvas, quality);
