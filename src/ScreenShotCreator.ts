@@ -9,19 +9,31 @@ export class ScreenShotCreator {
     private readonly canvas: HTMLCanvasElement;
     private readonly context: CanvasRenderingContext2D;
 
+    /** Wait for video to rewind to targetTime and resolve Promise */
+    private static rewindVideo(video: HTMLVideoElement, targetTime: number): Promise<void> {
+        return new Promise((resolve) => {
+            const handler = () => {
+                video.removeEventListener('seeked', handler);
+                resolve();
+            };
+            video.addEventListener('seeked', handler);
+            video.currentTime = targetTime;
+        });
+    }
+
     /**
      * @param videoSourceUrl - URL to a video
      */
     constructor(videoSourceUrl: string) {
         this.video = document.createElement('video');
         this.canvas = document.createElement('canvas');
-        this.context = this.canvas.getContext('2d');
+        const context = this.canvas.getContext('2d');
 
-        if (!this.context) {
+        if (!context) {
             throw new Error('Could not create canvas context');
         }
 
-        this.video.crossOrigin = 'anonymous';
+        this.context = context;
         this.video.src = videoSourceUrl;
     }
 
@@ -35,21 +47,15 @@ export class ScreenShotCreator {
      * @return Promise with array of Blob URLs to captured images.
      */
     public async getFrames(numberOfFrames: number, config: Config = DEFAULT_CONFIG): Promise<string[]> {
-        try {
-            // todo apply partial config (the rest is default)
-            if (this.video.readyState !== VIDEO_READY_STATE) {
-                await this.waitVideoLoading(config.maxVideoLoadTime);
-            }
-
-            const {video, canvas} = this;
-            // Match canvas and video size
-            canvas.height = video.videoHeight;
-            canvas.width = video.videoWidth;
-
-            return await this.processVideo(numberOfFrames, config);
-        } catch (e) {
-            return e;
+        if (this.video.readyState !== VIDEO_READY_STATE) {
+            await this.waitVideoLoading(config.maxVideoLoadTime);
         }
+
+        // Match canvas and video size
+        this.canvas.height = this.video.videoHeight;
+        this.canvas.width = this.video.videoWidth;
+
+        return this.getEvenlyDistributedImages(numberOfFrames, config);
     }
 
     /**
@@ -61,24 +67,23 @@ export class ScreenShotCreator {
      * @return Promise with Blob URL to captured image.
      */
     public async getFrameFrom(time: number, config: Config): Promise<string> {
-        try {
-            // todo apply partial config (the rest is default)
-            if (this.video.readyState !== VIDEO_READY_STATE) {
-                await this.waitVideoLoading(config.maxVideoLoadTime);
-            }
-
-            const {video, canvas} = this;
-            // Match canvas and video size
-            canvas.height = video.videoHeight;
-            canvas.width = video.videoWidth;
-
-            return await this.captureImage(time, config.imageQuality);
-        } catch (e) {
-            return e;
+        if (this.video.readyState !== VIDEO_READY_STATE) {
+            await this.waitVideoLoading(config.maxVideoLoadTime);
         }
+
+        // Match canvas and video size
+        this.canvas.height = this.video.videoHeight;
+        this.canvas.width = this.video.videoWidth;
+
+        return await this.captureImage(time, config.imageQuality);
     }
 
-    private waitVideoLoading(maxWaitTime: number): Promise<void> {
+    /**
+     * Wait until video loaded, then resolves Promise
+     * Rejects Promise on error
+     * Rejects Promise if wait time exceeded maxWaitTime (if specified)
+     * */
+    private waitVideoLoading(maxWaitTime?: number): Promise<void> {
         return new Promise((resolve, reject) => {
             const onLoadedHandler = () => {
                 removeListeners();
@@ -97,61 +102,61 @@ export class ScreenShotCreator {
 
             this.video.addEventListener('loadedmetadata', onLoadedHandler);
             this.video.addEventListener('error', onErrorHandler);
-            setTimeout(onErrorHandler, maxWaitTime);
+
+            if (maxWaitTime) {
+                setTimeout(onErrorHandler, maxWaitTime);
+            }
         });
     }
 
-    private async processVideo(numberOfThumbnails: number, config: Config): Promise<string[]> {
-        try {
-            const {video} = this;
-            const thumbnails = [];
-            const step = video.duration / numberOfThumbnails;
+    /**
+     * Make specific amount of screenshots evenly distributed from start to end of the video.
+     *
+     * @param numberOfImages - amount of screenshots to make
+     * @param config - configuration object
+     *
+     * @return Promise with array of Blob url's to images
+     */
+    private async getEvenlyDistributedImages(numberOfImages: number, config: Config): Promise<string[]> {
+        const images = [];
+        const step = this.video.duration / numberOfImages;
 
-            for (let i = 0; i < numberOfThumbnails; i++) {
-                const thumbnail = await this.captureImage(step * i, config.imageQuality);
-                thumbnails.push(thumbnail);
-            }
-
-            return thumbnails;
-        } catch (e) {
-            return e;
+        for (let i = 0; i < numberOfImages; i++) {
+            const image = await this.captureImage(step * i, config.imageQuality);
+            images.push(image);
         }
+
+        return images;
     }
 
     /**
      * Set video to a specific time and wait while video rewind.
      * Then draw image on canvas and convert it to Blob URL
-     * @return {Promise<string>} - Blob URL
      */
-    private async captureImage(time: number, quality: number): Promise<string> {
-        try {
-            const {video, canvas, context} = this;
-            await this.rewindVideo(video, time);
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            return await this.convertCanvasImageToBlobUrl(canvas, quality);
-        } catch (e) {
-            return e;
-        }
+    private async captureImage(time: number, quality: number = 1): Promise<string> {
+        await ScreenShotCreator.rewindVideo(this.video, time);
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.context.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+        return this.convertCanvasImageToBlobUrl(this.canvas, quality);
     }
 
-    private rewindVideo(video: HTMLVideoElement, targetTime: number): Promise<void> {
-        return new Promise(resolve => {
-            video.currentTime = targetTime;
-            const handler = () => {
-                video.removeEventListener('seeked', handler);
-                resolve();
-            };
-            video.addEventListener('seeked', handler);
-        });
-    }
-
+    /**
+     * Convert image from canvas into Blob url in JPG (PNG in Edge)
+     */
     private convertCanvasImageToBlobUrl(canvas: HTMLCanvasElement, quality: number): Promise<string> {
-        return new Promise(resolve => {
-            canvas.toBlob(
-                (blob) => resolve(window.URL.createObjectURL(blob)),
-                'image/jpeg',
-                quality
-            );
+        return new Promise((resolve) => {
+            if (canvas.toBlob) {
+                canvas.toBlob(
+                    (blob: Blob | null) => resolve(window.URL.createObjectURL(blob)),
+                    'image/jpeg',
+                    quality,
+                );
+            } else if ((canvas as any).msToBlob) {
+                const blob = (canvas as any).msToBlob();
+                resolve(window.URL.createObjectURL(blob));
+            } else {
+                throw new Error('canvas.toBlob and canvas.msToBlob are not supported');
+            }
         });
     }
 }
