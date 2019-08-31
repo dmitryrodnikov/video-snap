@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "license": "MIT",
   "main": "VideoSnap.js",
+  "author": "Dmitry Rodnikov",
+  "description": "Get multiple snapshots from video in a browser",
   "scripts": {
     "build": "tsc",
     "demo": "webpack --config ./demo/webpack.config.js"
