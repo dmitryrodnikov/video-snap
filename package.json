@@ -2,6 +2,7 @@
   "name": "video-snap",
   "version": "1.0.0",
   "license": "MIT",
+  "main": "VideoSnap.js",
   "scripts": {
     "build": "tsc",
     "demo": "webpack --config ./demo/webpack.config.js"
