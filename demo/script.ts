@@ -1,4 +1,4 @@
-import {VideoSnap} from '../src/VideoSnap';
+import {VideoSnap} from '../src';
 
 const renderInput = (): void => {
     const videoInput = document.createElement('input');
