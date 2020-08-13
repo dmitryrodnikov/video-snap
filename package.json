@@ -21,8 +21,8 @@
   },
   "devDependencies": {
     "gh-pages": "^3.1.0",
-    "html-webpack-plugin": "^3.2.0",
-    "ts-loader": "^5.4.5",
+    "html-webpack-plugin": "^4.3.0",
+    "ts-loader": "^8.0.2",
     "typescript": "^3.9.7",
     "webpack": "^4.44.1",
     "webpack-cli": "^3.3.12"
