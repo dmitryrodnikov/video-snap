@@ -1,6 +1,9 @@
 # VideoSnap
 Get multiple snapshots from video in a browser.
 
+## Demo
+https://dmitryrodnikov.github.io/video-snap/
+
 ## Usage
 Imagine you want to render thumbnails for a video that user just added to file input.
 
