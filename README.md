@@ -1,4 +1,5 @@
-# VideoSnap
+
+# VideoSnap 📹 => 🎞
 Get multiple snapshots from video in a browser.
 
 ## Demo
